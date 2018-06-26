@@ -1,9 +1,9 @@
 import { ComponentType } from 'react';
 
-export interface IRegistry<AssetMap = any> {
+export interface IRegistry {
   metadata: IMetadata;
   getComponentMetadata: <Props> (comp: ComponentType<Props>) => IComponentMetadata<Props>;
-  getAssetMetadata: <AssetType extends keyof AssetMap, Asset extends AssetMap[AssetType]> (asset: Asset, type: AssetType, name: string, description?: string) => IAssetMetadata;
+  getAssetMetadata: <AssetType extends keyof AssetMap, Asset extends AssetMap[AssetType]> (asset: Asset, type: AssetType, name: string, description?: string) => IAssetMetadata<AssetType>;
   getThemeMetadata: (theme: any, name: string) => IThemeMetadata;
   clear: () => void;
 }
@@ -17,12 +17,12 @@ export interface IComponentMetadata<Props> {
 
 export interface IMetadata {
   components: Map<ComponentType<any>, IComponentMetadata<any>>;
-  assets: Map<any, IAssetMetadata>;
+  assets: Map<any, IAssetMetadata<any>>;
   themes: Map<any, IStyleMetadata>;
 }
 
-export interface IAssetMetadata {
-  type: string;
+export interface IAssetMetadata<AssetType> {
+  type: AssetType;
   name: string;
   description?: string;
 }

@@ -1,5 +1,5 @@
 import { IAssetMetadata } from './types';
 
-export class AssetMetadata implements IAssetMetadata {
-  constructor(public type: string, public name: string, public description?: string) {}
+export class AssetMetadata<AssetType> implements IAssetMetadata<AssetType> {
+  constructor(public type: AssetType, public name: string, public description?: string) {}
 }

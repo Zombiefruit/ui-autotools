@@ -5,11 +5,7 @@ import {ComponentMetadata} from './component-metadata';
 import {ThemeMetadata} from './theme-metadata';
 import Metadata from './metadata';
 
-interface IAssetMap {
-  svg: ComponentType;
-}
-
-const Registry: IRegistry<IAssetMap> = {
+const Registry: IRegistry = {
   metadata: new Metadata(),
   getComponentMetadata <Props>(comp: ComponentType<Props>): ComponentMetadata<Props> {
     if (!this.metadata.components.has(comp)) {
@@ -18,7 +14,7 @@ const Registry: IRegistry<IAssetMap> = {
 
     return this.metadata.components.get(comp)!;
   },
-  getAssetMetadata <AssetType extends keyof IAssetMap, Asset extends IAssetMap[AssetType]>(asset: Asset, type: AssetType, name: string, description?: string): IAssetMetadata {
+  getAssetMetadata <AssetType extends keyof AssetMap, Asset extends AssetMap[AssetType]>(asset: Asset, type: AssetType, name: string, description?: string): IAssetMetadata<AssetType> {
     if (!this.metadata.assets.has(asset)) {
       this.metadata.assets.set(asset, new AssetMetadata(type, name, description));
     }

@@ -44,8 +44,8 @@ describe('Registry', () => {
     });
 
     it('returns an already existing metadata', () => {
-      const myAssetMetadata = Registry.getAssetMetadata(TestAsset, 'svg', 'image');
-      const mySecondAssetMetadata = Registry.getAssetMetadata(TestAsset, 'svg', 'image');
+      const myAssetMetadata = Registry.getAssetMetadata(TestAsset, 'img', 'image');
+      const mySecondAssetMetadata = Registry.getAssetMetadata(TestAsset, 'img', 'image');
 
       expect(mySecondAssetMetadata).to.equal(myAssetMetadata);
     });
