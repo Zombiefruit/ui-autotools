@@ -20,7 +20,8 @@
   "files": [
     "cjs",
     "esm",
-    "patch-console.js"
+    "patch-console.js",
+    "require-hooks.js"
   ],
   "engines": {
     "node": ">=8"
