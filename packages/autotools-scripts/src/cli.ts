@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import '@ui-autotools/utils/require-hooks';
+import '@ui-autotools/utils/cjs/require-hooks';
 import {Command} from 'commander';
 import ssrTest from './ssr-test/mocha-wrapper';
 import {hydrationTest} from '@ui-autotools/sanity';
