@@ -4,6 +4,7 @@ import {Composite} from './composite/composite';
 import {Modal} from './modal/modal';
 import {PostRenderHook} from './post-render-hook/post-render-hook';
 import {UnsafeLifecycle} from './unsafe-lifecycle/unsafe-lifecycle';
+import {InaccessibleInput} from './inaccessible-input/inaccessible-input';
 
 const App: React.SFC = () => {
   return (
@@ -20,6 +21,7 @@ const App: React.SFC = () => {
       <Composite />
       <PostRenderHook />
       <UnsafeLifecycle />
+      <InaccessibleInput />
     </div>
   );
 };

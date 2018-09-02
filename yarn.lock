@@ -527,6 +527,10 @@
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/@stylable/runtime/-/runtime-0.1.7.tgz#c42f06b8783b0f1c3fdfaf9ba227a1aa7e68ef03"
 
+"@stylable/runtime@^0.1.8":
+  version "0.1.8"
+  resolved "https://repo.dev.wixpress.com/artifactory/api/npm/npm-repos/@stylable/runtime/-/runtime-0.1.8.tgz#cf48e3db4d862a291bcd4a9839f3fad79da469f3"
+
 "@stylable/webpack-plugin@^0.1.7":
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/@stylable/webpack-plugin/-/webpack-plugin-0.1.7.tgz#882f0060e55090d6c46c55128d1228c895f99811"
@@ -535,6 +539,14 @@
     css-selector-tokenizer "^0.7.0"
     find-config "^1.0.0"
     lodash.clonedeep "^4.5.0"
+    webpack-sources "^1.1.0"
+
+"@stylable/webpack-plugin@^0.1.9":
+  version "0.1.9"
+  resolved "https://repo.dev.wixpress.com/artifactory/api/npm/npm-repos/@stylable/webpack-plugin/-/webpack-plugin-0.1.9.tgz#c29c957205acfee3880a3c5a96adf26480cd5d58"
+  dependencies:
+    "@stylable/runtime" "^0.1.8"
+    find-config "^1.0.0"
     webpack-sources "^1.1.0"
 
 "@types/accepts@*":
@@ -8072,7 +8084,7 @@ stylable-runtime@^1.0.7:
 
 stylable@^5.4.11:
   version "5.4.11"
-  resolved "https://registry.yarnpkg.com/stylable/-/stylable-5.4.11.tgz#a54fbd0cad902b5f98f3d01227b63527a6a9a4d7"
+  resolved "https://repo.dev.wixpress.com/artifactory/api/npm/npm-repos/stylable/-/stylable-5.4.11.tgz#a54fbd0cad902b5f98f3d01227b63527a6a9a4d7"
   dependencies:
     clean-css "^4.1.11"
     css-selector-tokenizer "^0.7.0"

@@ -26,5 +26,9 @@
     "@ui-autotools/scripts": "^1.0.19",
     "react": "^16.4.1",
     "react-dom": "^16.4.1"
+  },
+  "devDependencies": {
+    "@stylable/webpack-plugin": "^0.1.9",
+    "stylable": "^5.4.11"
   }
 }
