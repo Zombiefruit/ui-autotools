@@ -17,6 +17,7 @@ import {
   getComponentNamesFromMetadata
 } from './meta';
 import {getClientData} from './client-data';
+import {getComponentsStylesheet} from './style-meta';
 const StylableWebpackPlugin = require('@stylable/webpack-plugin');
 
 interface IProjectOptions {
@@ -85,7 +86,8 @@ function getWebsiteWebpackConfig(
             loader: 'ts-loader',
             options: {
               compilerOptions: {
-                declaration: false
+                declaration: false,
+                declarationMap: false
               }
             }
           }
@@ -223,4 +225,7 @@ export async function buildWebsite(
     process.stderr.write(e);
     process.exit(1);
   }
+  // tslint:disable-next-line:no-console
+  console.log('hey');
+  getComponentsStylesheet('/Users/rashellek/WorkSpace/wix/ui-autotools/packages/mock-repo/src/inaccessible-input/inaccessible-input.st.css');
 }
