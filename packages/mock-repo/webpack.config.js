@@ -1,4 +1,5 @@
 const path = require('path');
+const StylableWebpackPlugin = require('@stylable/webpack-plugin');
 
 module.exports = {
   devtool: 'source-map',
