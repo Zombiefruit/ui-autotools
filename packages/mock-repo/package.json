@@ -16,7 +16,7 @@
     "lint": "run-p lint:src lint:test",
     "lint:src": "tslint --project src",
     "lint:test": "tslint --project test",
-    "test": "mocha -r typescript-support \"./test/node/**/*.node-spec.ts?(x)\" --watch-extensions ts,tsx",
+    "test": "mocha -r typescript-support \"./test/node/**/*.node-spec.ts?(x)\" --watch-extensions ts,tsx && npx autotools sanity && npx autotools a11y && npx autotools snap",
     "snap": "npx autotools snap",
     "a11y": "npx autotools a11y",
     "sanity": "npx autotools sanity"
