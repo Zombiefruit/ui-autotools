@@ -53,6 +53,65 @@ describe('schema-linker - imports', () => {
         expect(res).to.eql(expected);
     });
 
+    it('should link imported type definition from a file with in file dependencies', async () => {
+        const fileName = 'index.ts';
+        const res = linkTest({
+            [fileName]: `
+                import {AnInterface} from './import1';
+                export type B = AnInterface<string>;`,
+            ['import1.ts']: `
+                export interface AnInterface<T>{
+                    something:T;
+                }
+                export interface AnExtendingInterface<T> extends AnInterface<T>{
+                    somethingElse:number;
+                };`
+        }, 'B', fileName);
+
+        const expected: Schema<'object'> = {
+            type: 'object',
+            properties: {
+                something: {
+                    type: 'string'
+                },
+                somethingElse: {
+                    type: 'number'
+                }
+            },
+            required: ['something']
+        };
+        expect(res).to.eql(expected);
+    });
+    it('should link "imported as" interfaces', async () => {
+        const fileName = 'index.ts';
+        const res = linkTest({
+            [fileName]: `
+                import {MyInterface as IM} from './import';
+                export interface A extends IM<string> {
+                    someone: number;
+                };`,
+            ['import.ts']: `
+                export interface MyInterface<T> {
+                    something:T;
+                };`
+        }, 'A', fileName);
+
+        const expected: Schema<'object'> = {
+            $ref: interfaceId,
+            properties: {
+                something: {
+                    inheritedFrom: '#MyInterface',
+                    type: 'string'
+                },
+                someone: {
+                    type: 'number'
+                }
+            },
+            required: ['someone', 'something']
+        };
+        expect(res).to.eql(expected);
+    });
+
     it('should link imported interfaces', async () => {
         const fileName = 'index.ts';
         const res = linkTest({
