@@ -58,7 +58,8 @@ describe('schema-linker - imports', () => {
         const res = linkTest({
             [fileName]: `
                 import {AnInterface} from './import1';
-                export type B = AnInterface<string>;`,
+                export interface B extends AnInterface<string>{
+                };`,
             ['import1.ts']: `
                 export interface AnInterface<T>{
                     something:T;
