@@ -4,9 +4,12 @@ import { IFileSystem } from '@file-services/types';
 import { IBaseHost } from '@file-services/typescript';
 import { transform } from '@ui-autotools/schema-extract/esm/file-transformer';
 import {BaseView as BaseSchemaView, defaultSchemaViewRegistry} from '@ui-autotools/schema-views/src';
-
 import 'sanitize.css';
 import './playground.css';
+import { ModuleSchema, Schema } from '@ui-autotools/schema-extract/esm/json-schema-types';
+import { SimulationPanel } from './simulation-panel';
+
+// const availableDefinitions: string[] = [];
 
 export interface IPlaygroundProps {
     fs: IFileSystem;
@@ -17,13 +20,15 @@ export interface IPlaygroundProps {
 
 export interface IPlaygroundState {
     transpiledOutput: string;
-    schema: object;
+    schema: ModuleSchema | undefined;
+    selectedExport: string;
 }
 
 export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroundState> {
-    public state = {
+    public state: IPlaygroundState = {
         transpiledOutput: '',
-        schema: {}
+        schema: undefined,
+        selectedExport: ''
     };
 
     public componentDidMount() {
@@ -32,9 +37,18 @@ export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroun
 
     public render() {
         const { filePath, fs: { readFileSync } } = this.props;
-
+        let schemaForPanel: Schema | undefined;
+        const definitionsMap: Map<string, Schema> = new Map();
+        let selectedExport = '';
+        let availableDefs: string[] = [];
+        if (this.state.schema && this.state.schema.definitions) {
+            availableDefs = Object.keys(this.state.schema.definitions!);
+            selectedExport = this.state.selectedExport || availableDefs[0];
+            schemaForPanel = this.state.schema.definitions[this.state.selectedExport] || this.state.schema.definitions[availableDefs[0]];
+            availableDefs.forEach((key) => definitionsMap.set(key, this.state.schema!.definitions![key]));
+        }
         return (
-            <div className="playground">
+        <div className="playground">
                 <textarea
                     className="playground-pane source-code-pane"
                     spellCheck={false}
@@ -48,16 +62,32 @@ export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroun
                     readOnly={true}
                 />
                 <div className="playground-pane view-pane">
-                    <BaseSchemaView
-                        schema={this.state.schema}
-                        schemaRegistry={new Map()}
-                        viewRegistry={defaultSchemaViewRegistry}
-                    />
-                </div>
-            </div>
-        );
+                    <select onChange={this.selectExport} value={selectedExport}>
+                        {
+                            availableDefs.map((key) => {
+                                return <option key={key} value={key}>{key}</option>;
+                            })
+                        }
+                    </select>
+                     {
+                        schemaForPanel ?
+                        <SimulationPanel schemaRegistry={definitionsMap} rootSchema={selectedExport}/>
+                        : null
+                     }
+                     {
+                        schemaForPanel ?
+                        <BaseSchemaView schema={schemaForPanel} schemaRegistry={definitionsMap} viewRegistry={defaultSchemaViewRegistry}/>
+                        : null
+                     }
+
+                </div>;
+        </div >);
+
     }
 
+    private selectExport = (ev: React.ChangeEvent<HTMLSelectElement>) => {
+        this.setState({selectedExport: ev.target.value});
+    }
     private transpileFile() {
         const transpiledOutput = this.getTranspiledCode();
         const program = this.props.languageService.getProgram();
@@ -65,9 +95,7 @@ export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroun
         const sourceFile = program && program.getSourceFile(this.props.filePath);
         if (typeChecker && sourceFile) {
             const moduleSchema = transform(typeChecker, sourceFile, this.props.filePath, '/');
-            const schema = moduleSchema.properties && moduleSchema.properties.default ?
-                moduleSchema.properties.default : moduleSchema;
-            this.setState({ transpiledOutput, schema });
+            this.setState({ transpiledOutput, schema: moduleSchema });
         } else {
             this.setState({ transpiledOutput });
         }
