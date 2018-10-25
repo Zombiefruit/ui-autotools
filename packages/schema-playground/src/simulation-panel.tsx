@@ -7,7 +7,10 @@ export const userEditRepo = editRepo.clone('userEditRepo', (node: any) => {
     if (node.type) {
         return node.type;
     }
-    return 'unknown';
+    if (node.ts_type) {
+        return node.ts_type;
+    }
+    return 'common/unknown';
 });
 
 userEditRepo.addWrapper(
@@ -20,15 +23,29 @@ userEditRepo.addWrapper(
     }
 );
 
-userEditRepo.register('unknown', {
+userEditRepo.register('common/unknown', {
     name: 'unknown',
     component: (props: AutoViewProps) =>
         <span style={{color: 'red'}}>unknown</span>
+});
+
+userEditRepo.register('common/any', {
+    name: 'any',
+    component: (props: AutoViewProps) =>
+        <span style={{color: 'red'}}>any</span>
 });
 export function sanitize(schema: Schema, availableDefs: string[]): Schema {
     if (!schema.type) {
         if (schema.$ref && availableDefs.includes(schema.$ref.slice(1))) {
             return schema;
+        }
+        if (schema.$ref && schema.$ref.startsWith('common/')) {
+            const newSchema = {...schema, ts_type: schema.$ref};
+            delete newSchema.$ref;
+            if (schema.$ref === 'common/interface') {
+                newSchema.type = 'object';
+            }
+            return sanitize(newSchema, availableDefs);
         }
         return {
 
@@ -41,7 +58,8 @@ export function sanitize(schema: Schema, availableDefs: string[]): Schema {
                 properties[propName] = sanitize(schema.properties![propName], availableDefs);
             });
         } else {
-            return {} as any;
+            return {
+            } as any;
         }
         return {
             type: 'object',
@@ -73,7 +91,7 @@ export class SimulationPanel extends React.Component<{
         }));
         const rootSchema: ISchemaWithId = definitionsArr.find((schema) => '#' + this.props.rootSchema === schema.$id) || (sanitize({}, []) as any);
         return (
-                <RepositoryProvider components={userEditRepo} /*schemas={definitionsArr}*/>
+                <RepositoryProvider components={userEditRepo} schemas={definitionsArr}>
                     <AutoView
                         schema={rootSchema}
                     />

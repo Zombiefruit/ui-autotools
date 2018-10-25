@@ -22,13 +22,15 @@ export interface IPlaygroundState {
     transpiledOutput: string;
     schema: ModuleSchema | undefined;
     selectedExport: string;
+    mode: 'docs' | 'panel';
 }
 
 export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroundState> {
     public state: IPlaygroundState = {
         transpiledOutput: '',
         schema: undefined,
-        selectedExport: ''
+        selectedExport: '',
+        mode: 'docs'
     };
 
     public componentDidMount() {
@@ -69,13 +71,17 @@ export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroun
                             })
                         }
                     </select>
+                    <select onChange={this.selectMode} value={this.state.mode}>
+                        <option value="docs">Docs</option>
+                        <option value="panel">Panel</option>
+                    </select>
                      {
-                        schemaForPanel ?
+                        this.state.mode === 'panel' && schemaForPanel ?
                         <SimulationPanel schemaRegistry={definitionsMap} rootSchema={selectedExport}/>
                         : null
                      }
                      {
-                        schemaForPanel ?
+                        this.state.mode === 'docs' && schemaForPanel ?
                         <BaseSchemaView schema={schemaForPanel} schemaRegistry={definitionsMap} viewRegistry={defaultSchemaViewRegistry}/>
                         : null
                      }
@@ -87,6 +93,9 @@ export class Playground extends React.PureComponent<IPlaygroundProps, IPlaygroun
 
     private selectExport = (ev: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState({selectedExport: ev.target.value});
+    }
+    private selectMode = (ev: React.ChangeEvent<HTMLSelectElement>) => {
+        this.setState({mode: ev.target.value as any});
     }
     private transpileFile() {
         const transpiledOutput = this.getTranspiledCode();
