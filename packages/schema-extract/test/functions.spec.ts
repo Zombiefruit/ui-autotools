@@ -338,8 +338,9 @@ describe('schema-extract - functions', () => {
                     ],
                     requiredArguments: ['str'],
                     returns: {
-                        $ref: '/src/test-assets#AClass'                    }
+                        $ref: '/src/test-assets#AClass'
                     }
+                }
             }
 
         };

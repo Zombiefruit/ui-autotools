@@ -29,6 +29,6 @@ export async function transformTest(source: string, moduleId: string): Promise<M
         throw new Error(`transformTest: cannot retrieve Program for ${moduleId}`);
     }
 
-    const chckr = program.getTypeChecker();
-    return transform(chckr, program.getSourceFile(testedFile)!, '/src/' + moduleId, '/' + projectName, fs.path);
+    const checker = program.getTypeChecker();
+    return transform(checker, program.getSourceFile(testedFile)!, '/src/' + moduleId, '/' + projectName, fs.path);
 }

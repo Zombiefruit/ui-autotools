@@ -2,7 +2,6 @@ import ts from 'typescript';
 import {ModuleSchema, Schema, NullSchemaId, UndefinedSchemaId, FunctionSchemaId, isSchemaOfType, FunctionSchema, ClassSchema, ClassConstructorSchemaId, ClassSchemaId, interfaceId, InterfaceSchema } from './json-schema-types';
 import { generateDataLiteral } from './data-literal-transformer';
 import { resolveImportedIdentifier, resolveImportPath, IFileSystemPath } from './imported-identifier-resolver';
-// console.log(types)
 
 export interface IEnv {
     checker: ts.TypeChecker;
@@ -43,10 +42,10 @@ export function transform(
     exports.forEach((exportObj) => {
         const node = getNode(exportObj)!;
         if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node)) {
-            res.properties![exportObj.getName()] = describeFunction(node, env).schema;
+            res.properties![exportObj.getName()] = describeFunction(node, env);
         } else if (ts.isClassDeclaration(node)) {
             res.definitions = res.definitions || {};
-            const classDefinitions = describeClass(node, env).schema;
+            const classDefinitions = describeClass(node, env);
             const className = exportObj.getName();
             res.definitions[className] = classDefinitions;
             res.properties![className] = {
@@ -58,15 +57,15 @@ export function transform(
             if (ts.isVariableDeclaration(node)) {
                 exportSchema = describeVariableDeclaration(node, env).schema;
             } else if (ts.isExportSpecifier(node)) {
-                exportSchema = exportSpecifierDescriber(node, env, exportObj).schema;
+                exportSchema = exportSpecifierDescriber(node, env, exportObj);
             } else if (ts.isExportAssignment(node)) {
-                exportSchema = assignmentDescriber(node, env).schema;
+                exportSchema = assignmentDescriber(node, env);
             } else if (ts.isTypeAliasDeclaration(node)) {
                 isTypeOnly = true;
-                exportSchema = describeTypeAlias(node, env).schema;
+                exportSchema = describeTypeAlias(node, env);
             } else if (ts.isInterfaceDeclaration(node)) {
                 isTypeOnly = true;
-                exportSchema = describeInterface(node, env).schema;
+                exportSchema = describeInterface(node, env);
             }
             const documentation = exportObj.getDocumentationComment(checker);
             if (documentation.length) {
@@ -93,7 +92,7 @@ export function transform(
     return res;
 }
 
-export type TsNodeDescriber<N extends ts.Node, S extends Schema = Schema> = (n: N, env: IEnv, typeSet?: Set<ts.Node>) => {schema: S, required?: boolean};
+export type TsNodeDescriber<N extends ts.Node, S extends Schema = Schema> = (n: N, env: IEnv, typeSet?: Set<ts.Node>) => S;
 
 function getNode(symb: ts.Symbol): ts.Node | undefined {
     if (!symb) {
@@ -113,21 +112,17 @@ const exportSpecifierDescriber = (decl: ts.ExportSpecifier, env: IEnv, symb: ts.
     if (aliasedSymb) {
         const aliasedNode = getNode(aliasedSymb);
         if (aliasedNode && ts.isVariableDeclaration(aliasedNode)) {
-            return describeVariableDeclaration(aliasedNode, env);
+            return describeVariableDeclaration(aliasedNode, env).schema;
         }
     }
 
     const exportClause = decl.parent!.parent!;
     if (ts.isExportDeclaration(exportClause) && exportClause.moduleSpecifier) {
         return {
-            schema: {
-                $ref: resolveImportPath(exportClause.moduleSpecifier!.getText().slice(1, -1), '#typeof ' + symb!.name, env.modulePath, env.pathUtil),
-            }
+            $ref: resolveImportPath(exportClause.moduleSpecifier!.getText().slice(1, -1), '#typeof ' + symb!.name, env.modulePath, env.pathUtil),
         };
     }
-    return {
-        schema: {}
-    };
+    return {};
 };
 
 const assignmentDescriber: TsNodeDescriber<ts.ExportAssignment | ts.ExpressionWithTypeArguments> = (decl, env) => {
@@ -138,10 +133,10 @@ const assignmentDescriber: TsNodeDescriber<ts.ExportAssignment | ts.ExpressionWi
     } else if (ts.isPropertyAccessExpression(expression)) {
         if (ts.isIdentifier(expression.expression)) {
             const identifier = describeIdentifier(expression.expression, env);
-            const identifierRef = identifier.schema.$ref;
+            const identifierRef = identifier.$ref;
             const innerRef = expression.name.getText();
             if (identifierRef) {
-                identifier.schema.$ref = identifierRef.includes('#') ?
+                identifier.$ref = identifierRef.includes('#') ?
                     identifierRef + '.' + innerRef :
                     identifierRef + '#' + innerRef;
             }
@@ -152,16 +147,15 @@ const assignmentDescriber: TsNodeDescriber<ts.ExportAssignment | ts.ExpressionWi
     return serializeType(t, decl, env);
 };
 
-const describeVariableDeclaration: TsNodeDescriber<ts.VariableDeclaration | ts.PropertySignature | ts.ParameterDeclaration | ts.PropertyDeclaration> = (decl, env, tSet) => {
+const describeVariableDeclaration: (n: ts.VariableDeclaration | ts.PropertySignature | ts.ParameterDeclaration | ts.PropertyDeclaration, env: IEnv, typeSet?: Set<ts.Node>) => {schema: Schema, required?: boolean} = (decl, env, tSet) => {
     const {result, set} = checkCircularType(tSet, decl);
     if (result) {
-        return result;
+        return {schema: result};
     }
     let res: Schema | undefined;
     let isRequired = true;
     if (decl.type) {
-
-        res = describeTypeNode(decl.type!, env, set).schema;
+        res = describeTypeNode(decl.type!, env, set);
         if (decl.initializer) {
             isRequired = false;
             const defaultVal = generateDataLiteral({
@@ -179,10 +173,10 @@ const describeVariableDeclaration: TsNodeDescriber<ts.VariableDeclaration | ts.P
     } else if (decl.initializer) {
         isRequired = false;
         if (ts.isIdentifier(decl.initializer)) {
-            res = describeIdentifier(decl.initializer, env, set).schema;
+            res = describeIdentifier(decl.initializer, env, set);
             res.$ref = res.$ref!.replace('#', '#typeof ');
         } else if (ts.isPropertyAccessExpression(decl.initializer) && ts.isIdentifier(decl.initializer.expression)) {
-            res = describeIdentifier(decl.initializer.expression, env, set).schema;
+            res = describeIdentifier(decl.initializer.expression, env, set);
             let ref = res.$ref!;
             if (ref.includes('#')) {
                 ref = ref!.replace('#', '#typeof ') + '.' + decl.initializer.name.getText();
@@ -193,7 +187,7 @@ const describeVariableDeclaration: TsNodeDescriber<ts.VariableDeclaration | ts.P
                 $ref: ref,
             };
         } else {
-            res = serializeType(env.checker.getTypeAtLocation(decl), decl, env).schema;
+            res = serializeType(env.checker.getTypeAtLocation(decl), decl, env);
             const defaultVal = generateDataLiteral({
                 checker: env.checker,
                 pathUtil: env.pathUtil,
@@ -215,7 +209,7 @@ const describeVariableDeclaration: TsNodeDescriber<ts.VariableDeclaration | ts.P
 
     if (!res) {
         isRequired = false;
-        res = serializeType(env.checker.getTypeAtLocation(decl), decl, env).schema;
+        res = serializeType(env.checker.getTypeAtLocation(decl), decl, env);
         const child = decl.getChildAt(0);
         if (child && ts.isObjectBindingPattern(child)) {
             const defaultVal = generateDataLiteral({
@@ -286,37 +280,35 @@ const describeTypeNode: TsNodeDescriber<ts.TypeNode> = (decl, env, tSet) => {
 const describeMappedType: TsNodeDescriber<ts.MappedTypeNode> = (decl, env, tSet) => {
     const res: Schema<'object'> = {
         type: 'object',
-        additionalProperties: describeTypeNode(decl.type!, env, tSet).schema,
-        propertyNames: describeTypeNode(decl.typeParameter.constraint!, env, tSet).schema,
+        additionalProperties: describeTypeNode(decl.type!, env, tSet),
+        propertyNames: describeTypeNode(decl.typeParameter.constraint!, env, tSet),
     };
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const describeTypeAlias: TsNodeDescriber<ts.TypeAliasDeclaration> = (decl, env) => {
     const res = describeTypeNode(decl.type, env);
     const genericParams = getGenericParams(decl, env);
     if (genericParams) {
-        res.schema.genericParams = genericParams;
+        res.genericParams = genericParams;
     }
     return res;
 };
 
 const describeInterface: TsNodeDescriber<ts.InterfaceDeclaration> = (decl, env) => {
     const localRes = describeTypeLiteral(decl, env);
-    localRes.schema.$ref = interfaceId;
+    localRes.$ref = interfaceId;
     const genericParams = getGenericParams(decl, env);
     if (genericParams) {
-        localRes.schema.genericParams = genericParams;
+        localRes.genericParams = genericParams;
     }
     if (decl.heritageClauses) {
         decl.heritageClauses.forEach((clauses) => {
             clauses.types.forEach((t) => {
                 if (t.typeArguments) {
-                    localRes.schema.genericArguments = t.typeArguments.map((a) => describeTypeNode(a, env).schema);
+                    localRes.genericArguments = t.typeArguments.map((a) => describeTypeNode(a, env));
                 }
-                (localRes.schema as InterfaceSchema).extends = assignmentDescriber(t, env).schema;
+                (localRes as InterfaceSchema).extends = assignmentDescriber(t, env);
             });
         });
     }
@@ -353,7 +345,7 @@ const describeFunction: TsNodeDescriber<ts.FunctionDeclaration | ts.ArrowFunctio
         arguments: funcArguments,
     };
     if (returns) {
-        res.returns = returns.schema;
+        res.returns = returns;
     }
     const genericParams = getGenericParams(decl, env);
     if (genericParams) {
@@ -371,16 +363,14 @@ const describeFunction: TsNodeDescriber<ts.FunctionDeclaration | ts.ArrowFunctio
     if (required.length) {
         res.requiredArguments = required;
     }
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const getReturnSchema: TsNodeDescriber<ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionTypeNode | ts.ConstructorDeclaration | ts.MethodDeclaration, FunctionSchema> = (decl, env, tSet) => {
-    const returnSchema = decl.type ? describeTypeNode(decl.type, env, tSet) : serializeType(env.checker.getTypeAtLocation(decl), decl, env).schema.returns!;
+    const returnSchema = decl.type ? describeTypeNode(decl.type, env, tSet) : serializeType(env.checker.getTypeAtLocation(decl), decl, env).returns!;
     const returnTag = ts.getJSDocReturnTag(decl);
     if (returnTag && returnTag.comment) {
-        returnSchema.schema.description = returnTag.comment;
+        returnSchema.description = returnTag.comment;
     }
     return returnSchema;
 };
@@ -391,9 +381,9 @@ const describeClass: TsNodeDescriber<ts.ClassDeclaration, ClassSchema> = (decl, 
         decl.heritageClauses.forEach((node) => {
             if (node.token === ts.SyntaxKind.ExtendsKeyword) {
                 const t = node.types[0];
-                extendRef = assignmentDescriber(t, env).schema;
+                extendRef = assignmentDescriber(t, env);
                 if (t.typeArguments) {
-                    extendRef.genericArguments = t.typeArguments.map((a) => describeTypeNode(a, env).schema);
+                    extendRef.genericArguments = t.typeArguments.map((a) => describeTypeNode(a, env));
                 }
             }
         });
@@ -405,7 +395,7 @@ const describeClass: TsNodeDescriber<ts.ClassDeclaration, ClassSchema> = (decl, 
     decl.members.forEach((member) => {
         if (ts.isConstructorDeclaration(member)) {
             const funcSchema = describeFunction(member, env);
-            constructorSign = funcSchema ? funcSchema.schema : undefined;
+            constructorSign = funcSchema ? funcSchema : undefined;
             member.parameters.forEach(((p) => {
                 if (hasModifier(p, ts.SyntaxKind.PublicKeyword)) {
                     properties[p.name.getText()] = describeVariableDeclaration(p, env).schema;
@@ -416,7 +406,7 @@ const describeClass: TsNodeDescriber<ts.ClassDeclaration, ClassSchema> = (decl, 
             if (ts.isPropertyDeclaration(member)) {
                 schema = describeVariableDeclaration(member, env).schema;
             } else if (ts.isMethodDeclaration(member)) {
-                schema = describeFunction(member, env).schema;
+                schema = describeFunction(member, env);
             }
             if (hasModifier(member, ts.SyntaxKind.StaticKeyword)) {
                 staticProperties[member.name!.getText()] = schema;
@@ -453,68 +443,55 @@ const describeClass: TsNodeDescriber<ts.ClassDeclaration, ClassSchema> = (decl, 
         }
     }
 
-    return {
-        schema: classDef
-    };
+    return classDef;
 };
 
 const describeTypeReference: TsNodeDescriber<ts.TypeReferenceNode> = (decl, env, tSet) => {
     const typeName = decl.typeName;
     let res;
     if (ts.isQualifiedName(typeName)) {
-        res = describeQualifiedName(typeName, env, tSet).schema;
+        res = describeQualifiedName(typeName, env, tSet);
     } else {
-        res = describeIdentifier(typeName, env, tSet).schema;
+        res = describeIdentifier(typeName, env, tSet);
     }
     const typeArgs = decl.typeArguments;
     if (typeArgs) {
         if (isSchemaOfType('array', res)) {
-            res.items = describeTypeNode(typeArgs[0], env, tSet).schema;
+            res.items = describeTypeNode(typeArgs[0], env, tSet);
         } else {
             res.genericArguments = typeArgs.map((t) => {
-                return describeTypeNode(t, env, tSet).schema;
+                return describeTypeNode(t, env, tSet);
             });
         }
     }
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const describeQualifiedName: TsNodeDescriber<ts.QualifiedName> = (decl, env, tSet) => {
     if (ts.isIdentifier(decl.left)) {
-        const identifierRef = describeIdentifier(decl.left, env, tSet).schema.$ref || '';
+        const identifierRef = describeIdentifier(decl.left, env, tSet).$ref || '';
         const innerRef = decl.right.getText();
         return {
-            schema: {
-
-                $ref: identifierRef.includes('#') ?
-                    identifierRef + '.' + innerRef :
-                    identifierRef + '#' + innerRef,
-            }
+            $ref: identifierRef.includes('#') ?
+                identifierRef + '.' + innerRef :
+                identifierRef + '#' + innerRef,
         };
     } else {
         // tslint:disable-next-line:no-debugger
         debugger;
     }
-    return {
-        schema: {}
-    };
+    return {};
 };
 
 const describeIdentifier: TsNodeDescriber<ts.Identifier> = (decl, env, tSet) => {
     if (decl.getText() === 'Array') {
         return {
-            schema: {
-                type: 'array',
-            }
+            type: 'array',
         };
     }
     if (decl.getText() === 'Object') {
         return {
-            schema: {
-                type: 'object'
-            },
+            type: 'object'
         };
     }
     const referencedSymb = env.checker.getSymbolAtLocation(decl)!;
@@ -524,13 +501,11 @@ const describeIdentifier: TsNodeDescriber<ts.Identifier> = (decl, env, tSet) => 
         const importedRef = resolveImportedIdentifier(referencedSymbDecl, env.modulePath, env.pathUtil);
         if (importedRef) {
             return {
-                schema: {
-                    $ref: importedRef
-                }
+                $ref: importedRef
             };
         }
         if (ts.isVariableDeclaration(referencedSymbDecl)) {
-            return describeVariableDeclaration(referencedSymbDecl, env, tSet);
+            return describeVariableDeclaration(referencedSymbDecl, env, tSet).schema;
         } else if (ts.isTypeParameterDeclaration(referencedSymbDecl)) {
             if (ts.isFunctionTypeNode(referencedSymbDecl.parent!)) {
                 ref = '#' + ts.getNameOfDeclaration(referencedSymbDecl.parent!.parent as any)!.getText() + '!' + referencedSymb.name;
@@ -542,18 +517,11 @@ const describeIdentifier: TsNodeDescriber<ts.Identifier> = (decl, env, tSet) => 
         }
 
         return {
-            schema: {
-                $ref: ref,
-
-            }
+            $ref: ref,
         };
     } else {
-        // debugger;
         return {
-            schema: {
-                $ref: '#' + decl.getText()
-
-            }
+            $ref: '#' + decl.getText()
         };
     }
 
@@ -575,42 +543,36 @@ const describeTypeLiteral: TsNodeDescriber<ts.TypeLiteralNode | ts.InterfaceDecl
                 res.required.push(memberName);
             }
         } else if (ts.isIndexSignatureDeclaration(member)) {
-            res.additionalProperties = describeTypeNode(member.type!, env, tSet).schema;
+            res.additionalProperties = describeTypeNode(member.type!, env, tSet);
         }
 
     });
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const describeArrayType: TsNodeDescriber<ts.ArrayTypeNode> = (decl, env, tSet) => {
     const res: Schema<'array'> = {
         type: 'array',
-        items: describeTypeNode(decl.elementType, env, tSet).schema,
+        items: describeTypeNode(decl.elementType, env, tSet),
     };
 
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const describeIntersectionType: TsNodeDescriber<ts.IntersectionTypeNode> = (decl, env, tSet) => {
     const schemas: Schema[] = decl.types.map((t) => {
-        return describeTypeNode(t, env, tSet).schema;
+        return describeTypeNode(t, env, tSet);
     });
     const res: Schema = {
         $allOf: schemas,
     };
 
-    return {
-        schema: res
-    };
+    return res;
 };
 
 const describeUnionType: TsNodeDescriber<ts.UnionTypeNode> = (decl, env, tSet) => {
     const schemas: Schema[] = decl.types.map((t) => {
-        return describeTypeNode(t, env, tSet).schema;
+        return describeTypeNode(t, env, tSet);
     });
     const groupedSchemas: Schema[] = [];
     let specificString: Schema | undefined;
@@ -657,15 +619,10 @@ const describeUnionType: TsNodeDescriber<ts.UnionTypeNode> = (decl, env, tSet) =
 
     if (groupedSchemas.length > 1) {
         return {
-            schema: {
-                $oneOf: groupedSchemas,
-            }
+            $oneOf: groupedSchemas,
         };
     }
-    return {
-        schema: groupedSchemas[0] || {}
-    };
-
+    return groupedSchemas[0] || {};
 };
 
 function isUnionType(t: ts.Type): t is ts.UnionType {
@@ -677,13 +634,11 @@ function removeExtension(pathName: string, pathUtil: IFileSystemPath): string {
 }
 
 const supportedPrimitives = ['string', 'number', 'boolean'];
-function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: Set<string>, memoMap = new Map()): {schema: Schema<any>} {
+function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: Set<string>, memoMap = new Map()): Schema<any> {
     const checker = env.checker;
     if (t.aliasSymbol) {
         return {
-            schema: {
                 $ref: '#' + t.aliasSymbol.name
-            }
         };
     } else if (t.symbol) {
         const node = getNode(t.symbol);
@@ -696,83 +651,60 @@ function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: S
                 const fileNameNoExt = removeExtension(fileName, env.pathUtil);
                 const pathInProj = fileNameNoExt.includes('node_modules') ? fileNameNoExt : fileNameNoExt.slice(env.projectPath.length);
                 return {
-                    schema: {
-                        $ref: pathInProj + '#' + t.symbol.name,
-                    }
+                    $ref: pathInProj + '#' + t.symbol.name,
                 };
             }
 
             return {
-                schema: {
-                    $ref: '#' + t.symbol.name,
-
-                }
+                $ref: '#' + t.symbol.name,
             };
         }
     }
     const typeString = checker.typeToString(t);
     if (supportedPrimitives.includes(typeString)) {
         return {
-            schema: {
-                type: checker.typeToString(t) as any,
-            }
+            type: checker.typeToString(t) as any,
         };
     }
 
     if (isUnionType(t)) {
         return {
-            schema: {
-                $oneOf: t.types.map((tt) => serializeType(tt, rootNode, env, circularSet, memoMap).schema),
-            }
+            $oneOf: t.types.map((tt) => serializeType(tt, rootNode, env, circularSet, memoMap)),
         };
 
     }
     if (typeString === 'null') {
         return {
-            schema: {
-                $ref: NullSchemaId,
-            }
+            $ref: NullSchemaId,
         };
     }
     if (typeString === 'undefined' || typeString === 'void') {
         return {
-            schema: {
-                $ref: UndefinedSchemaId,
-            }
+            $ref: UndefinedSchemaId,
         };
     }
     if (typeString === 'any') {
-        return {
-            schema: {}
-        };
+        return {};
     }
 
     if (typeString.startsWith('"')) {
         return {
-            schema: {
-                type: 'string',
-
-                enum: [typeString.slice(1, -1)],
-            }
+            type: 'string',
+            enum: [typeString.slice(1, -1)],
         };
     }
 
     if (!isNaN(parseFloat(typeString))) {
         return {
-            schema: {
-                type: 'number',
-                enum: [parseFloat(typeString)],
-
-            }
+            type: 'number',
+            enum: [parseFloat(typeString)],
         };
     }
 
     if (typeString === 'true' || typeString === 'false') {
         return {
-            schema: {
-                type: 'boolean',
-                enum: [typeString === 'true']
-            }
+            type: 'boolean',
+            enum: [typeString === 'true']
         };
     }
 
@@ -790,9 +722,7 @@ function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: S
                 return serializeType(t, rootNode, env, circularSet, memoMap);
             }),
         };
-        return {
-            schema: res
-        };
+        return res;
     }
 
     if (typeString.startsWith('{')) {
@@ -819,7 +749,7 @@ function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: S
                         break;
                     }
                     cSet.add(propName);
-                    memoMap.set(propName, serializeType(fieldType, rootNode, env, cSet, memoMap).schema);
+                    memoMap.set(propName, serializeType(fieldType, rootNode, env, cSet, memoMap));
                     res.properties![propName] = memoMap.get(propName);
                 }
             }
@@ -827,20 +757,18 @@ function serializeType(t: ts.Type, rootNode: ts.Node, env: IEnv, circularSet?: S
 
         const indexType = checker.getIndexTypeOfType(t, ts.IndexKind.String);
         if (indexType) {
-            res.additionalProperties = serializeType(indexType, rootNode, env, circularSet, memoMap).schema;
+            res.additionalProperties = serializeType(indexType, rootNode, env, circularSet, memoMap);
         }
-        return {schema: res};
+        return res;
     }
 
     if (typeString) {
         return {
-            schema: {$ref: '#' + typeString}
+            $ref: '#' + typeString
         };
     }
 
-    return {
-        schema: {$ref: UndefinedSchemaId}
-    };
+    return {$ref: UndefinedSchemaId};
 }
 
 function getGenericParams(decl: ts.SignatureDeclaration | ts.ClassLikeDeclaration | ts.InterfaceDeclaration | ts.TypeAliasDeclaration, env: IEnv): Schema[] | undefined {
@@ -849,7 +777,7 @@ function getGenericParams(decl: ts.SignatureDeclaration | ts.ClassLikeDeclaratio
             const r: Schema = {};
             r.name = t.name.getText();
             if (t.constraint) {
-                r.type = serializeType(env.checker.getTypeAtLocation(t.constraint!), t, env).schema.type;
+                r.type = serializeType(env.checker.getTypeAtLocation(t.constraint!), t, env).type;
             }
             return r;
         });
@@ -911,7 +839,7 @@ function checkCircularType(tSet: Set<ts.Node> | undefined, decl: ts.Node) {
     let res;
     if (tSet && tSet.has(decl)) {
         const typeName = (decl as any).name ? (decl as any).name.getText() : ((decl.parent as any).name ? (decl.parent as any).name.getText() : decl.getText());
-        res = {schema: {$ref: '#' + typeName}} as any;
+        res = {$ref: '#' + typeName};
     }
     const cSet = tSet ? new Set(tSet) : new Set();
     cSet.add(decl);
