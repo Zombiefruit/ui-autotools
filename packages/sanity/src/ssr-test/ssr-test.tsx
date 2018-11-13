@@ -34,15 +34,14 @@ export const ssrTest = (): void => {
                         // Take second snapshot, trigger garbage collection and compute the diff
                         const end = heap.end();
                         console.log('end', end);
-                        // const objectsThatRemainedInMemoryAfterGarbageCollection = _.map(end.change.details, 'what');
+                        const objectsThatRemainedInMemoryAfterGarbageCollection = _.map(end.change.details, 'what');
 
-                        // const leakingObjectName = _.difference(objectsThatRemainedInMemoryAfterGarbageCollection, node_only_class_names);
+                        let assertion_message = '';
+                        if (objectsThatRemainedInMemoryAfterGarbageCollection.length !== 0) {
+                            assertion_message = `Somewhere in your code you created on object called ${leakingObjectName}. Unfortunately, you did not free ${leakingObjectName} and it is left memory after render and garbage collection. This will create a memory leak in server side rendering. Please make sure that ${leakingObjectName} is freed after a render. If you are not sure how please consult with server side rendering team.`;
+                        }
 
-                        // let assertion_message = '';
-                        // if (leakingObjectName.length !== 0) {
-                        //     assertion_message = `Somewhere in your code you created on object called ${leakingObjectName}. Unfortunately, you did not free ${leakingObjectName} and it is left memory after render and garbage collection. This will create a memory leak in server side rendering. Please make sure that ${leakingObjectName} is freed after a render. If you are not sure how please consult with server side rendering team.`;
-                        // }
-                        // expect(assertion_message).toEqual('');
+                        expect(assertion_message).to.equal('');
                       });
                 }));
             });
