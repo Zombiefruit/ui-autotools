@@ -61,10 +61,12 @@ export async function runTestsInPuppeteer({testPageUrl, noSandbox}: {testPageUrl
 
   let browser: puppeteer.Browser | undefined;
   try {
-    const args = noSandbox ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
-    browser = await puppeteer.launch({headless: true, args});
+    // const args = noSandbox ? ['--no-sandbox', '--disable-setuid-sandbox'] : [];
+    browser = await puppeteer.launch({headless: false, devtools: true});
     const page = await browser.newPage();
     await page.setViewport({width: viewportWidth, height: viewportHeight});
+    // tslint:disable-next-line:no-debugger
+    await page.evaluate(() => {(() => debugger; )(); });
 
     page.on('dialog', (dialog) => {
       dialog.dismiss();
@@ -84,13 +86,13 @@ export async function runTestsInPuppeteer({testPageUrl, noSandbox}: {testPageUrl
 
     return numFailedTests;
   } finally {
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } catch (_) {
-      // If the main code throws and browser.close() also throws, we don't want
-      // to override the original exception.
-    }
+    // try {
+    //   if (browser) {
+    //     await browser.close();
+    //   }
+    // } catch (_) {
+    //   // If the main code throws and browser.close() also throws, we don't want
+    //   // to override the original exception.
+    // }
   }
 }

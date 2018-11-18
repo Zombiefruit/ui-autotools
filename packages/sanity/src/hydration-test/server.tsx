@@ -52,9 +52,9 @@ export async function hydrationTest(
       process.stderr.write(error.toString());
     }
   } finally {
-    if (server) {
-      server.close();
-    }
-    process.exit();
+    // if (server) {
+    //   server.close();
+    // }
+    // process.exit();
   }
 }
