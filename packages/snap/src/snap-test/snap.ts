@@ -9,6 +9,7 @@ import {parseSnapshotFilename} from '../generate-snapshots/filename-utils';
 import {IFileInfo} from '../generate-snapshots/build-base-files';
 import {setApplitoolsBatchId} from './set-batch-id';
 import {getBranchName} from '@ui-autotools/node-utils';
+import mlog from 'mocha-logger';
 
 interface ITestResult {
   status: 'error' | 'new' | 'modified' | 'unmodified';
