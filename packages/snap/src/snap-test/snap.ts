@@ -163,6 +163,4 @@ export async function runEyes(projectPath: string, tempDirectory: string, files:
   }
 
   await Promise.all(resultPromises);
-
-  process.exit();
 }
