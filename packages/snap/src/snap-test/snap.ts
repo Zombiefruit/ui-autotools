@@ -78,7 +78,7 @@ function logEyesResult(name: string, {status, url, error}: ITestResult) {
                isError ? chalk.bgRedBright('ERROR') :
                chalk.green('UNMODIFIED');
   consoleLog(`${statusMessage} ${name} ${formattedUrl}`);
-
+  mlog.success(`${statusMessage} ${name} ${formattedUrl}`);
   if (isError) {
     consoleLog(error);
   }

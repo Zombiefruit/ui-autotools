@@ -1,7 +1,8 @@
 import isCI from 'is-ci';
 import {exec} from 'child_process';
 
-if (isCI) {
+// CHANGE BACK BEFORE MERGING
+if (!isCI) {
   exec('yarn autotools-snap', (err, stdout, stderr) => {
     if (err) {
       process.exitCode = (err as any).status;
